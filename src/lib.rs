@@ -49,12 +49,20 @@ impl GenericsModifier {
     pub fn set_known(&mut self, key: &Ident, value: KnownParam) -> Result<()> {
         match value {
             KnownParam::Lifetime(_) => {
-                return set_known(&mut self.lifetimes, key, value);
+                return set_known(&mut self.lifetimes, key, Some(value));
             }
             KnownParam::Const(_) | KnownParam::Type(_) | KnownParam::UseDefault => {
-                return set_known(&mut self.types, key, value);
+                return set_known(&mut self.types, key, Some(value));
             }
         }
+    }
+
+    pub fn set_type_unknown(&mut self, key: &Ident) -> Result<()> {
+        set_known(&mut self.types, key, None)
+    }
+
+    pub fn set_lifetime_unknown(&mut self, key: &Ident) -> Result<()> {
+        set_known(&mut self.lifetimes, key, None)
     }
 
     pub fn split_for_impl(&self) -> (ImplGenerics, TypeGenerics, &Option<WhereClause>) {
@@ -65,11 +73,11 @@ impl GenericsModifier {
 fn set_known<T>(
     table: &mut LinkedTable<(T, Option<KnownParam>)>,
     key: &Ident,
-    known: KnownParam,
+    known: Option<KnownParam>,
 ) -> Result<()> {
     match table.get_mut(key) {
         Some(param) => {
-            param.1 = Some(known);
+            param.1 = known;
             Ok(())
         }
         None => Err(Error::new_spanned(
